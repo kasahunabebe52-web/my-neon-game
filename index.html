@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Hexagon Slasher</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+        #ui {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #00f2fe;
+            text-shadow: 0 0 10px #00f2fe;
+        }
+        canvas {
+            border: 4px solid #4facfe;
+            background: #161b22;
+            box-shadow: 0 0 30px rgba(79, 172, 254, 0.4);
+            border-radius: 16px;
+            cursor: pointer;
+        }
+        #btn {
+            margin-top: 15px;
+            padding: 10px 25px;
+            font-size: 18px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">ነጥብ: <span id="score">0</span></div>
+    <canvas id="gameCanvas" width="600" height="500"></canvas>
+    <button id="btn" onclick="startGame()">ጌሙን ለመጀመር እዚህ ይጫኑ</button>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        let score = 0;
+        let gameActive = false;
+        let targets = [];
+        let particles = [];
+
+        function startGame() {
+            if (gameActive) return;
+            score = 0;
+            scoreElement.innerText = score;
+            targets = [];
+            particles = [];
+            gameActive = true;
+            document.getElementById("btn").style.display = "none";
+            spawnTarget();
+        }
+
+        function spawnTarget() {
+            if (!gameActive) return;
+            targets.push({
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: Math.random() * (canvas.height - 100) + 50,
+                radius: 40,
+                color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                timer: 60 // የመጥፊያ ጊዜ
+            });
+            setTimeout(spawnTarget, 800);
+        }
+
+        canvas.addEventListener("mousedown", (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            targets.forEach((target, index) => {
+                const dist = Math.hypot(target.x - mx, target.y - my);
+                if (dist < target.radius) {
+                    // ፍንዳታ (Particles) መፍጠር
+                    for(let i=0; i<10; i++) {
+                        particles.push({
+                            x: target.x, y: target.y,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: (Math.random() - 0.5) * 6,
+                            radius: Math.random() * 4 + 2,
+                            color: target.color,
+                            alpha: 1
+                        });
+                    }
+                    targets.splice(index, 1);
+                    score += 10;
+                    scoreElement.innerText = score;
+                }
+            });
+        });
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameActive) {
+                // ኢላማዎችን መሳል
+                targets.forEach((target, index) => {
+                    target.timer--;
+                    if(target.timer <= 0) {
+                        // ጊዜው ካለቀ ጌም ኦቨር ይሆናል
+                        gameActive = false;
+                        document.getElementById("btn").style.display = "block";
+                        document.getElementById("btn").innerText = "እንደገና ይሞክሩ";
+                        alert("ተሸነፉ! የመጨረሻ ነጥብዎ: " + score);
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = target.color;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = target.color;
+                    ctx.fill();
+                    ctx.shadowBlur = 0; // ማጽዳት
+                });
+
+                // ፍንዳታዎችን ማንቀሳቀስ
+                particles.forEach((p, index) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.02;
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                    if(p.alpha <= 0) particles.splice(index, 1);
+                });
+            } else {
+                ctx.fillStyle = "#a4b0be";
+                ctx.font = "24px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("ለመጀመር ታች ያለውን ቁልፍ ይጫኑ!", canvas.width/2, canvas.height/2);
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+</body>
+</html>
